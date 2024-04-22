@@ -1,0 +1,88 @@
+---
+title: "Final"
+author: "Flavien Moise"
+date: "2024-04-22"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(shiny)
+library(ggplot2)
+library(readr)
+
+data <- read.csv('cardio_train.csv', sep=';')
+data$bmi <- data$weight / (data$height / 100)^2
+data$ap_mean <- rowMeans(data[ , c(6,7)], na.rm=TRUE)
+
+ui <- fluidPage(
+  titlePanel("Cardiovascular Data Analysis"),
+  tabsetPanel(
+    tabPanel("BMI Distribution",
+             sidebarLayout(
+               sidebarPanel(
+                 numericInput("height", "Enter your height (in cm):", value = NULL),
+                 numericInput("weight", "Enter your weight (in kg):", value = NULL),
+                 actionButton("submit", "Submit")
+               ),
+               mainPanel(
+                 plotOutput("bmi_plot")
+               )
+             )
+    ),
+    tabPanel("Blood Pressure vs Weight",
+             sidebarLayout(
+               sidebarPanel(
+                 varSelectInput("yvar", "Blood Pressure Adjustment (low, high, average)", data[ , c(6,7,14)], selected = "ap_mean"),
+                 sliderInput("span", label = "Confidence Level adjustment:",
+                             min = 0.2, max = 0.95, value = 0.95, step = 0.05),
+                 sliderInput("xrange", label = "Range of Weight Values:",
+                             min = 0, max = 200, value = 200, step = 10),
+                 sliderInput("yrange", label = "Range of Blood Pressure Values:",
+                             min = 25, max = 250, value = 250, step = 10)
+               ),
+               mainPanel(
+                 plotOutput("line")
+               )
+             )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  output$bmi_plot <- renderPlot({
+    filtered_data <- data[data$bmi <= 60, ]
+    
+    plot(1, type = "n", xlim = range(filtered_data$bmi), ylim = c(0, 0.15),
+         main = "Distribution of BMI", xlab = "BMI", ylab = "Density")
+    
+    lines(density(filtered_data$bmi[filtered_data$cardio == 1]), col = "blue", lwd = 2)
+    lines(density(filtered_data$bmi[filtered_data$cardio == 0]), col = "red", lwd = 2)
+    
+    legend("topright", legend = c("Cardio 1", "Cardio 0"), col = c("blue", "red"), lwd = 2)
+    
+    if (!is.null(input$height) && !is.null(input$weight)) {
+      data_user <- data.frame(height = input$height, weight = input$weight)
+      data_user$bmi <- data_user$weight / (data_user$height / 100)^2
+      
+      abline(v = data_user$bmi, col = "green", lwd = 2)
+    }
+  })
+  
+  output$line <- renderPlot({
+    ggplot(data, aes(x=weight, !!input$yvar)) + 
+      geom_point() + 
+      stat_smooth(span = input$span) +
+      xlim(0, input$xrange) + 
+      ylim(25, input$yrange) + 
+      theme_bw()
+  })
+}
+
+shinyApp(ui = ui, server = server)
+```
+
