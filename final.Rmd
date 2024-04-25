@@ -65,7 +65,7 @@ ui <- fluidPage(
                  selectInput(
                    inputId="chart",
                    label="Choose chart type",
-                   choices=c("bar counts","bar proportions","pie")
+                   choices=c("pie","bar proportions","bar counts")
                  )
                ),
                mainPanel(
