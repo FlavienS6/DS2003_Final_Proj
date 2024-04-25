@@ -32,6 +32,8 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel("Introduction",
              mainPanel(
+               h3("Why we chose this topic:"),
+               p("Cardiovascular disease is the number one cause of death in America. We wanted to explore the potential relationships between different variables and the presence of cardiovascular disease to provide information on how to potentially avoid this disease."),
                h3("Dataset link:"),
                a("https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset", href = "https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset"),
                h3("4 types of variables in the dataset:"),
@@ -49,10 +51,9 @@ ui <- fluidPage(
                  tags$li("Cholesterol"),
                  tags$li("Blood pressure"),
                  tags$li("Average blood pressure (created variable)")
-               ),
-               h3("Why we chose this topic:"),
-               p("Cardiovascular disease is the number one cause of death in America. We wanted to explore the potential relationships between different variables and the presence of cardiovascular disease to provide information on how to potentially avoid this disease.")
+               )
              )
+               
     ),
     tabPanel("Smoking and Alcohol Consumption",
              sidebarLayout(
