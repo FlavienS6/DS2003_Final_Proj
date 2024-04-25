@@ -26,9 +26,34 @@ data$ap_mean <- rowMeans(data[ , c(6,7)], na.rm=TRUE)
 names(data)[6] <- "High Blood Pressure"
 names(data)[7] <- "Low Blood Pressure"
 names(data)[15] <- "Average Blood Pressure"
+
 ui <- fluidPage(
   titlePanel("Cardiovascular Data Analysis"),
   tabsetPanel(
+    tabPanel("Introduction",
+             mainPanel(
+               h3("Dataset link:"),
+               a("https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset", href = "https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset"),
+               h3("4 types of variables in the dataset:"),
+               tags$ul(
+                 tags$li("Objective – factual information (age, height, etc)"),
+                 tags$li("Examination – results of medical examination (Cholesterol, glucose)"),
+                 tags$li("Subjective – information given by patient (smoking, alcohol use, etc.)"),
+                 tags$li("Target Variable – presence of cardiovascular disease (binary variable)")
+               ),
+               h3("Variables we target in our proposed questions:"),
+               tags$ul(
+                 tags$li("Smoking"),
+                 tags$li("Alcohol use"),
+                 tags$li("Created variable of BMI, (weight/height)"),
+                 tags$li("Cholesterol"),
+                 tags$li("Blood pressure"),
+                 tags$li("Average blood pressure (created variable)")
+               ),
+               h3("Why we chose this topic:"),
+               p("Cardiovascular disease is the number one cause of death in America. We wanted to explore the potential relationships between different variables and the presence of cardiovascular disease to provide information on how to potentially avoid this disease.")
+             )
+    ),
     tabPanel("Smoking and Alcohol Consumption",
              sidebarLayout(
                sidebarPanel(
@@ -36,10 +61,15 @@ ui <- fluidPage(
                    inputId="xvar",
                    label="Choose independent variable",
                    choices=c("smoking","alcohol")
+                 ),
+                 selectInput(
+                   inputId="chart",
+                   label="Choose chart type",
+                   choices=c("bar counts","bar proportions","pie")
                  )
                ),
                mainPanel(
-                 plotOutput("bar")
+                 plotOutput("plot")
                )
              )
     ),
@@ -70,29 +100,102 @@ ui <- fluidPage(
                  plotOutput("line")
                )
              )
+    ),
+    tabPanel("Conclusion",
+             mainPanel(
+               h3("Overall Conclusion:"),
+               p("From these graphics we can conclude that:"),
+               tags$ul(
+                 tags$li("There is a positive correlation between weight and blood pressure"),
+                 tags$li("Those who experience cardiac events often have higher BMI"),
+                 tags$li("Smoking and Alcohol do not necessarily predict the presence of cardiovascular disease, potentially due to errors in reporting.")
+               ),
+               h3("Limitations of the Study:"),
+               tags$ul(
+                 tags$li("The dataset could have included more information on each of the patients that could have influenced the relationships we studied. For example, family history could have an influence on the presence of cardiovascular disease for"),
+                 tags$li("Where the data is collected from could potentially influence the conclusions we have drawn.")
+               ),
+               h3("Future Steps:"),
+               tags$ul(
+                 tags$li("If we were to take future steps in this process we could investigate the relationship between alternate variables and draw conclusions on the relevance to cardiovascular disease."),
+                 tags$li("We could also explore the possibility of finding a different dataset and running similar tests to see if we draw the same conclusions.")
+               )
+             )
     )
   )
 )
 
 server <- function(input, output, session) {
-  output$bar <- renderPlot({
-    if(input$xvar=="smoking"){
-      tab<-as.data.frame(table(card$smoke,card$cardio))
-      colnames(tab)<-c("smoking","cardiovascular","count")
-      ggplot(tab,aes(x=smoking,y=count,fill=cardiovascular))+
-        geom_bar(stat="identity")+
-        labs(x="Smoking",y="Count",fill="Cardiovascular Disease")+
-        scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
-        theme_minimal()
+  output$plot <- renderPlot({
+    if(input$chart=="bar counts"){
+      if(input$xvar=="smoking"){
+        tab<-as.data.frame(table(card$smoke,card$cardio))
+        colnames(tab)<-c("smoking","cardiovascular","count")
+        ggplot(tab,aes(x=smoking,y=count,fill=cardiovascular))+
+          geom_bar(stat="identity")+
+          labs(x="Smoking",y="Count",fill="Cardiovascular Disease")+
+          scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
+          theme_minimal()
+      }
+      else{
+        tab<-as.data.frame(table(card$alco,card$cardio))
+        colnames(tab)<-c("alcohol","cardiovascular","count")
+        ggplot(tab,aes(x=alcohol,y=count,fill=cardiovascular))+
+          geom_bar(stat="identity")+
+          labs(x ="Alcohol",y="Count",fill="Cardiovascular Disease")+
+          scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
+          theme_minimal()
+      }
+    }
+    else if(input$chart=="pie"){
+      if(input$xvar=="smoking"){
+        tab<-as.data.frame(table(card$smoke,card$cardio))
+        colnames(tab)<-c("smoking","cardiovascular","count")
+        counts<-tapply(tab$count,tab$smoking,sum)
+        tab$prop<-tab$count/counts[as.character(tab$smoking)]
+        ggplot(tab,aes(x="",y=prop,fill=cardiovascular))+
+          geom_bar(stat="identity",width=1)+
+          coord_polar("y",start=0)+
+          labs(fill="Cardiovascular Disease")+
+          theme_void()+
+          facet_wrap(~smoking)
+      }
+      else{
+        tab<-as.data.frame(table(card$alco,card$cardio))
+        colnames(tab)<-c("alcohol","cardiovascular","count")
+        counts<-tapply(tab$count,tab$alcohol,sum)
+        tab$prop<-tab$count/counts[as.character(tab$alcohol)]
+        ggplot(tab,aes(x="",y=prop,fill=cardiovascular))+
+          geom_bar(stat="identity",width=1)+
+          coord_polar("y",start=0)+
+          labs(fill="Cardiovascular Disease")+
+          theme_void()+
+          facet_wrap(~alcohol)
+      }
     }
     else{
-      tab<-as.data.frame(table(card$alco,card$cardio))
-      colnames(tab)<-c("alcohol","cardiovascular","count")
-      ggplot(tab,aes(x=alcohol,y=count,fill=cardiovascular))+
-        geom_bar(stat="identity")+
-        labs(x ="Alcohol",y="Count",fill="Cardiovascular Disease")+
-        scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
-        theme_minimal()
+      if(input$xvar=="smoking"){
+        tab<-as.data.frame(table(card$smoke,card$cardio))
+        colnames(tab)<-c("smoking","cardiovascular","count")
+        counts<-tapply(tab$count,tab$smoking,sum)
+        tab$prop<-tab$count/counts[as.character(tab$smoking)]
+        ggplot(tab,aes(x=smoking,y=prop,fill=cardiovascular))+
+          geom_bar(stat="identity")+
+          labs(x="Smoking",y="Proportion",fill="Cardiovascular Disease")+
+          scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
+          theme_minimal()
+      }
+      else{
+        tab<-as.data.frame(table(card$alco,card$cardio))
+        colnames(tab)<-c("alcohol","cardiovascular","count")
+        counts<-tapply(tab$count,tab$alcohol,sum)
+        tab$prop<-tab$count/counts[as.character(tab$alcohol)]
+        ggplot(tab,aes(x=alcohol,y=prop,fill=cardiovascular))+
+          geom_bar(stat="identity")+
+          labs(x ="Alcohol",y="Proportion",fill="Cardiovascular Disease")+
+          scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
+          theme_minimal()
+      }
     }
   })
   
