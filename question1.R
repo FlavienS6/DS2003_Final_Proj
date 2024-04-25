@@ -33,7 +33,7 @@ ui <- fluidPage(
             selectInput(
               inputId="chart",
               label="Choose chart type",
-              choices=c("bar","pie")
+              choices=c("bar counts","bar propotions","pie")
             )
         ),
 
@@ -47,7 +47,7 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     output$plot <- renderPlot({
-      if(input$chart=="bar"){
+      if(input$chart=="bar counts"){
         if(input$xvar=="smoking"){
           tab<-as.data.frame(table(card$smoke,card$cardio))
           colnames(tab)<-c("smoking","cardiovascular","count")
@@ -91,6 +91,30 @@ server <- function(input, output) {
             labs(fill="Cardiovascular Disease")+
             theme_void()+
             facet_wrap(~alcohol)
+        }
+      }
+      else{
+        if(input$xvar=="smoking"){
+          tab<-as.data.frame(table(card$smoke,card$cardio))
+          colnames(tab)<-c("smoking","cardiovascular","count")
+          counts<-tapply(tab$count,tab$smoking,sum)
+          tab$prop<-tab$count/counts[as.character(tab$smoking)]
+          ggplot(tab,aes(x=smoking,y=prop,fill=cardiovascular))+
+            geom_bar(stat="identity")+
+            labs(x="Smoking",y="Proportion",fill="Cardiovascular Disease")+
+            scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
+            theme_minimal()
+        }
+        else{
+          tab<-as.data.frame(table(card$alco,card$cardio))
+          colnames(tab)<-c("alcohol","cardiovascular","count")
+          counts<-tapply(tab$count,tab$alcohol,sum)
+          tab$prop<-tab$count/counts[as.character(tab$alcohol)]
+          ggplot(tab,aes(x=alcohol,y=prop,fill=cardiovascular))+
+            geom_bar(stat="identity")+
+            labs(x ="Alcohol",y="Proportion",fill="Cardiovascular Disease")+
+            scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
+            theme_minimal()
         }
       }
     })
