@@ -10,18 +10,39 @@ runtime: shiny
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, echo = FALSE, warning=FALSE}
 library(shiny)
 library(ggplot2)
 library(readr)
 
+card <- read_delim("cardio_train.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE, show_col_types = FALSE)
+card$cardio <- factor(card$cardio, labels = c("No", "Yes"))
+card$smoke <- factor(card$smoke, labels = c("Non Smoker", "Smoker"))
+card$alco <- factor(card$alco, labels = c("Doesn't Use Alcohol", "Uses Alcohol"))
+
 data <- read.csv('cardio_train.csv', sep=';')
 data$bmi <- data$weight / (data$height / 100)^2
 data$ap_mean <- rowMeans(data[ , c(6,7)], na.rm=TRUE)
-
+names(data)[6] <- "High Blood Pressure"
+names(data)[7] <- "Low Blood Pressure"
+names(data)[15] <- "Average Blood Pressure"
 ui <- fluidPage(
   titlePanel("Cardiovascular Data Analysis"),
   tabsetPanel(
+    tabPanel("Smoking and Alcohol Consumption",
+             sidebarLayout(
+               sidebarPanel(
+                 radioButtons(
+                   inputId="xvar",
+                   label="Choose independent variable",
+                   choices=c("smoking","alcohol")
+                 )
+               ),
+               mainPanel(
+                 plotOutput("bar")
+               )
+             )
+    ),
     tabPanel("BMI Distribution",
              sidebarLayout(
                sidebarPanel(
@@ -37,7 +58,7 @@ ui <- fluidPage(
     tabPanel("Blood Pressure vs Weight",
              sidebarLayout(
                sidebarPanel(
-                 varSelectInput("yvar", "Blood Pressure Adjustment (low, high, average)", data[ , c(6,7,14)], selected = "ap_mean"),
+                 varSelectInput("yvar", "Blood Pressure Adjustment (low, high, average)", data[ , c(6,7,14)], selected = "Average Blood Pressure"),
                  sliderInput("span", label = "Confidence Level adjustment:",
                              min = 0.2, max = 0.95, value = 0.95, step = 0.05),
                  sliderInput("xrange", label = "Range of Weight Values:",
@@ -54,6 +75,27 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
+  output$bar <- renderPlot({
+    if(input$xvar=="smoking"){
+      tab<-as.data.frame(table(card$smoke,card$cardio))
+      colnames(tab)<-c("smoking","cardiovascular","count")
+      ggplot(tab,aes(x=smoking,y=count,fill=cardiovascular))+
+        geom_bar(stat="identity")+
+        labs(x="Smoking",y="Count",fill="Cardiovascular Disease")+
+        scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
+        theme_minimal()
+    }
+    else{
+      tab<-as.data.frame(table(card$alco,card$cardio))
+      colnames(tab)<-c("alcohol","cardiovascular","count")
+      ggplot(tab,aes(x=alcohol,y=count,fill=cardiovascular))+
+        geom_bar(stat="identity")+
+        labs(x ="Alcohol",y="Count",fill="Cardiovascular Disease")+
+        scale_fill_manual(values=c("No"="grey","Yes"="blue"))+
+        theme_minimal()
+    }
+  })
+  
   output$bmi_plot <- renderPlot({
     filtered_data <- data[data$bmi <= 60, ]
     
@@ -63,7 +105,7 @@ server <- function(input, output, session) {
     lines(density(filtered_data$bmi[filtered_data$cardio == 1]), col = "blue", lwd = 2)
     lines(density(filtered_data$bmi[filtered_data$cardio == 0]), col = "red", lwd = 2)
     
-    legend("topright", legend = c("Cardio 1", "Cardio 0"), col = c("blue", "red"), lwd = 2)
+    legend("topright", legend = c("Cardio Event", "No Cardio Event"), col = c("blue", "red"), lwd = 2)
     
     if (!is.null(input$height) && !is.null(input$weight)) {
       data_user <- data.frame(height = input$height, weight = input$weight)
